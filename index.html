@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Dashboard — QG das Emoções (DivertidaMente)</title>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
+  :root{
+    --bg1: linear-gradient(120deg,#FFD93D,#4A90E2,#7BB661,#D7263D,#5C3D99);
+    --glass: rgba(255,255,255,0.12);
+    --card-radius: 14px;
+    --accent: #FFD93D;
+    --text: #ffffff;
+    --muted: rgba(255,255,255,0.85);
+    --success: #7BB661;
+    --primary: #4A90E2;
+  }
+
+  html,body{height:100%;margin:0;font-family:"Poppins",sans-serif;background:var(--bg1);background-size:400% 400%;animation:fundo 12s ease infinite;color:var(--text);-webkit-font-smoothing:antialiased;}
+  @keyframes fundo{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+
+  .bolhas div{position:fixed;border-radius:50%;opacity:0.18;animation:flutuar 10s infinite;pointer-events:none}
+  .b1{width:240px;height:240px;top:6%;left:3%;background:#FFD93D}
+  .b2{width:300px;height:300px;top:60%;left:72%;background:#4A90E2}
+  .b3{width:220px;height:220px;top:28%;left:82%;background:#D7263D}
+  .b4{width:170px;height:170px;top:75%;left:12%;background:#7BB661}
+  @keyframes flutuar{0%{transform:translateY(0)}50%{transform:translateY(-30px)}100%{transform:translateY(0)}}
+
+  /* Page frame */
+  .wrap{max-width:1200px;margin:20px auto;padding:18px;display:flex;flex-direction:column;gap:18px}
+  header{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .title{display:flex;flex-direction:column}
+  h1{margin:0;font-size:26px}
+  .subtitle{opacity:0.9;font-size:13px;margin-top:4px}
+
+  .top-actions{display:flex;gap:8px;align-items:center}
+
+  /* DASH layout B2: stacked blocks but grid inside */
+  .grid { display:grid; grid-template-columns: 1fr; gap:18px; }
+  @media(min-width:980px){ .grid { grid-template-columns: 1fr 420px; } }
+
+  /* Inside left: form + list + controls; right: charts and metrics */
+  .left-column{display:flex;flex-direction:column;gap:18px}
+  .card{background:var(--glass);padding:16px;border-radius:var(--card-radius);box-shadow:0 12px 30px rgba(0,0,0,0.18);backdrop-filter: blur(6px)}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .form-row{display:flex;flex-direction:column;gap:6px}
+  label{font-weight:600;font-size:13px;color:var(--muted)}
+  input[type="text"], input[type="email"], select, textarea{
+    padding:10px;border-radius:10px;border:none;font-size:14px;background: #ffffffdf;color:#222;
+  }
+  textarea{min-height:92px;resize:vertical}
+
+  .btn{padding:10px 12px;border-radius:10px;border:none;font-weight:700;cursor:pointer}
+  .btn-primary{background:var(--accent);color:#111}
+  .btn-ghost{background:transparent;color:var(--text);border:1px solid rgba(255,255,255,0.12)}
+
+  /* list */
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .search{padding:8px;border-radius:10px;border:none;background:#ffffffdf;color:#222}
+  .filter, .sort { padding:8px;border-radius:10px;border:none;background:#ffffffdf;color:#222 }
+
+  .lista { margin-top:12px; max-height:420px; overflow:auto; display:flex;flex-direction:column;gap:10px;padding-right:6px }
+  .item{background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));padding:12px;border-radius:12px;display:flex;justify-content:space-between;gap:12px}
+  .meta{max-width:72%}
+  .meta h3{margin:0;font-size:15px}
+  .meta p{margin:6px 0 0 0;font-size:13px;color:var(--muted)}
+  .meta .small{font-size:12px;opacity:0.85;margin-top:8px}
+
+  .actions{display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+  .actions button{min-width:110px}
+
+  /* right column */
+  .right-column{display:flex;flex-direction:column;gap:18px}
+  .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  @media(max-width:980px){ .metrics{grid-template-columns:repeat(2,1fr)} }
+  .metric{background:rgba(255,255,255,0.06);padding:12px;border-radius:10px;text-align:center}
+  .metric h4{margin:0;font-size:18px}
+  .metric p{margin:6px 0 0 0;font-size:13px;opacity:0.9}
+
+  /* charts */
+  .chart-card{display:flex;flex-direction:column;gap:10px}
+  canvas{background:transparent;border-radius:8px}
+
+  /* footer actions */
+  .footer-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
+
+  /* small */
+  .tiny{font-size:12px;opacity:0.9}
+
+  /* dark mode toggle */
+  .toggle {display:flex;align-items:center;gap:8px}
+
+  /* CSV link style */
+  a.csv-link{color:var(--text);text-decoration:underline}
+
+  /* ====== RESPONSIVIDADE MOBILE ====== */
+@media (max-width: 600px) {
+
+  h1 {
+    font-size: 20px;
+  }
+
+  .subtitle {
+    font-size: 11px;
+  }
+
+  .wrap {
+    padding: 12px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px;
+  }
+
+  /* Formulário em 1 coluna no mobile */
+  .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .form-row[style*="grid-column:1/3"] {
+    grid-column: 1/2 !important;
+  }
+
+  /* Inputs maiores e mais confortáveis no touch */
+  input, select, textarea {
+    font-size: 15px;
+    padding: 12px;
+  }
+
+  /* Lista */
+  .lista {
+    max-height: unset;
+  }
+
+  .item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .meta {
+    max-width: 100%;
+  }
+  .actions {
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+  .actions button {
+    flex: 1;
+  }
+
+  /* Métricas mais legíveis no mobile */
+  .metrics {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Gráficos */
+  canvas {
+    max-width: 100%;
+  }
+
+  /* Ajuste do header */
+  header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .top-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+/* Otimizações para o mobile — reduz a animação para não travar */
+@media (max-width: 600px) {
+  html, body {
+    background-size: 250% 250% !important;
+    animation: fundoMobile 18s ease infinite !important;
+    will-change: background-position;
+  }
+
+  @keyframes fundoMobile {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 90% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  /* Bolhas corrigidas */
+  .b1, .b2, .b3, .b4 {
+    opacity: 0.14 !important;
+    animation: flutuarMobile 12s ease-in-out infinite !important;
+    transform: translateZ(0);
+    will-change: transform;
+  }
+
+  @keyframes flutuarMobile {
+    0% { transform: translateY(0); }
+    50% { transform: translateY(-18px); }
+    100% { transform: translateY(0); }
+  }
+
+  .bolha1 { width: 150px; height: 150px; }
+  .bolha2 { width: 180px; height: 180px; }
+  .bolha3 { width: 140px; height: 140px; }
+  .bolha4 { width: 110px; height: 110px; }
+}
+
+/* ========================================= */
+/* ========== CORREÇÕES APLICADAS ========== */
+/* ========================================= */
+
+/* Evita cortes horizontais */
+html, body {
+  width: 100%;
+  overflow-x: hidden !important;
+}
+
+/* Grid responsiva no desktop */
+@media(min-width:980px){
+  .grid{
+    grid-template-columns: 1fr minmax(320px, 420px);
+  }
+}
+
+</style>
+</head>
+<body>
+  <div class="bolhas">
+    <div class="b1"></div><div class="b2"></div><div class="b3"></div><div class="b4"></div>
+  </div>
+
+  <div class="wrap">
+    <header>
+      <div class="title">
+        <h1>QG das Emoções — Painel Técnico</h1>
+        <div class="subtitle">Acesso exclusivo do Técnico — onde a Raiva gerencia chamados e a Alegria vibra com cada meta cumprida</div>
+      </div>
+
+      <div class="top-actions">
+        <div class="toggle tiny">Modo noturno: <input id="toggleDark" type="checkbox"></div>
+      </div>
+    </header>
+
+    <section class="grid">
+
+      <!-- LEFT -->
+      <div class="left-column">
+
+        <!-- CARD: formulário -->
+        <section class="card" id="card-form">
+          <h2> Registrar Chamado</h2>
+
+          <div style="margin-top:8px" class="form-grid">
+            <div class="form-row">
+              <label for="f_nome">Nome do cliente</label>
+              <input id="f_nome" type="text" placeholder="Ex: João Silva">
+            </div>
+            <div class="form-row">
+              <label for="f_email">E-mail</label>
+              <input id="f_email" type="email" placeholder="cliente@empresa.com">
+            </div>
+
+            <div class="form-row" style="grid-column:1/3">
+              <label for="f_dispositivo">Dispositivo</label>
+              <select id="f_dispositivo">
+                <option value="">Selecione</option>
+                <option>Computador</option><option>Notebook</option><option>Impressora</option><option>Internet / Roteador</option><option>Monitor</option><option>Outro</option>
+              </select>
+            </div>
+
+            <div class="form-row" style="grid-column:1/3">
+              <label for="f_problema">Tipo do Problema</label>
+              <select id="f_problema">
+                <option value="">Selecione</option>
+                <option>Não liga</option><option>Lento</option><option>Erro de sistema</option><option>Sem internet</option><option>Impressão falhando</option><option>Tela azul</option><option>Outro</option>
+              </select>
+            </div>
+
+            <div class="form-row" style="grid-column:1/3">
+              <label for="f_desc">Descrição detalhada</label>
+              <textarea id="f_desc" placeholder="Descreva com o máximo de detalhes possíveis..."></textarea>
+            </div>
+
+            <div style="grid-column:1/3; display:flex;gap:8px;align-items:center">
+              <button id="btn_submit" class="btn btn-primary">Enviar Chamado</button>
+              <button id="btn_clear" class="btn btn-ghost">Limpar</button>
+            </div>
+
+            <div id="formMsg" class="tiny" style="grid-column:1/3; display:none;"></div>
+          </div>
+        </section>
+
+        <!-- CARD: lista e controles -->
+        <section class="card" id="card-list">
+          <h2> Lista de Chamados</h2>
+
+          <div class="controls" style="margin-top:8px">
+            <input id="search" class="search" placeholder="Pesquisar (problema, dispositivo, descrição) ...">
+            <select id="filter" class="filter">
+              <option value="todos">Todos status</option>
+              <option value="aberto">Abertos</option>
+              <option value="andamento">Em andamento</option>
+              <option value="concluido">Concluídos</option>
+            </select>
+            <select id="sort" class="sort">
+              <option value="recent">Mais recentes</option>
+              <option value="oldest">Mais antigos</option>
+              <option value="status">Por status</option>
+            </select>
+
+            <div style="margin-left:auto;display:flex;gap:8px">
+              <button id="btn_export" class="btn btn-ghost">Exportar CSV</button>
+              <button id="btn_reset" class="btn btn-ghost">Resetar Dados</button>
+            </div>
+          </div>
+
+          <div class="lista" id="listContainer"></div>
+
+          <div class="footer-actions tiny">
+            <span id="countInfo"></span>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- RIGHT -->
+      <aside class="right-column">
+
+        <section class="card">
+          <h2> Métricas</h2>
+          <div style="margin-top:8px" class="metrics">
+            <div class="metric">
+              <h4 id="m_total">0</h4>
+              <p>Total de Chamados</p>
+            </div>
+            <div class="metric">
+              <h4 id="m_aberto">0</h4>
+              <p>Abertos</p>
+            </div>
+            <div class="metric">
+              <h4 id="m_andamento">0</h4>
+              <p>Em Andamento</p>
+            </div>
+            <div class="metric">
+              <h4 id="m_concluido">0</h4>
+              <p>Concluídos</p>
+            </div>
+            <div class="metric">
+              <h4 id="m_meta">5</h4>
+              <p>Meta Diária</p>
+            </div>
+            <div class="metric">
+              <h4 id="m_prod">0</h4>
+              <p>Produtividade Hoje</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="card chart-card">
+          <h2> Relatórios</h2>
+          <div style="display:flex;gap:12px;flex-wrap:wrap">
+            <div style="flex:1;min-width:240px">
+              <canvas id="chartStatus" height="220"></canvas>
+            </div>
+            <div style="flex:1;min-width:240px">
+              <canvas id="chartTipo" height="220"></canvas>
+            </div>
+          </div>
+
+          <div style="margin-top:12px">
+            <canvas id="chartTrend" height="120"></canvas>
+            <div class="tiny" style="margin-top:6px">Tendência diária: últimos 7 dias (concluídos por dia)</div>
+          </div>
+        </section>
+
+      </aside>
+
+    </section>
+
+    <footer style="margin-top:12px;text-align:center;font-size:12px;opacity:0.9">
+      Transforme problemas em memórias brilhantes!</code>
+    </footer>
+  </div>
+
+<script>
+/* Dashboard Único — Versão Temática Completa
+   Features:
+   - Single page: form, list, metrics, charts
+   - localStorage key: helpdesk_divertidamente_v5
+   - search, filter, sort, export csv, reset
+   - charts: status donut, tipo donut, trend line (7 dias)
+   - meta diária e produtividade hoje
+   - sync between tabs (storage event)
+*/
+
+const STORAGE_KEY = 'helpdesk_divertidamente_v5';
+const META_DIARIA = 5; // default meta
+let chamados = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+
+/* DOM helpers */
+const $ = id => document.getElementById(id);
+
+/* init elements */
+const f_nome = $('f_nome'), f_email = $('f_email'), f_dispositivo = $('f_dispositivo'), f_problema = $('f_problema'), f_desc = $('f_desc');
+const btn_submit = $('btn_submit'), btn_clear = $('btn_clear');
+const searchEl = $('search'), filterEl = $('filter'), sortEl = $('sort');
+const listContainer = $('listContainer'), countInfo = $('countInfo');
+const m_total = $('m_total'), m_aberto = $('m_aberto'), m_andamento = $('m_andamento'), m_concluido = $('m_concluido'), m_meta = $('m_meta'), m_prod = $('m_prod');
+const btn_export = $('btn_export'), btn_reset = $('btn_reset'), toggleDark = $('toggleDark');
+const formMsg = $('formMsg');
+
+/* Charts */
+let chartStatus = null, chartTipo = null, chartTrend = null;
+
+/* Utilities */
+function saveAll(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(chamados));
+}
+function loadAll(){
+  try { chamados = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+  catch { chamados = []; }
+}
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+/* Form actions */
+btn_submit.addEventListener('click', () => {
+  formMsg.style.display = 'none';
+  const nome = f_nome.value.trim(), email = f_email.value.trim();
+  const disp = f_dispositivo.value, prob = f_problema.value, desc = f_desc.value.trim();
+
+  if(!nome || !email || !disp || !prob || !desc){
+    formMsg.style.display = 'block';
+    formMsg.textContent = 'Preencha todos os campos antes de enviar.';
+    return;
+  }
+
+  const novo = {
+    id: uid(),
+    nome, email, dispositivo: disp, problema: prob, descricao: desc,
+    status: 'aberto',
+    criado: new Date().toISOString(),
+    concluidoEm: null
+  };
+
+  loadAll(); // reload to avoid race
+  chamados.push(novo);
+  saveAll();
+  renderAll();
+
+  // clear form
+  f_nome.value = ''; f_email.value = ''; f_dispositivo.value = ''; f_problema.value = ''; f_desc.value = '';
+  formMsg.style.display = 'block'; formMsg.textContent = 'Chamado criado com sucesso ✨';
+  setTimeout(()=> formMsg.style.display='none', 2500);
+});
+
+btn_clear.addEventListener('click', () => { f_nome.value=''; f_email.value=''; f_dispositivo.value=''; f_problema.value=''; f_desc.value=''; formMsg.style.display='none'; });
+
+/* List control handlers */
+searchEl.addEventListener('input', renderList);
+filterEl.addEventListener('change', renderList);
+sortEl.addEventListener('change', renderList);
+
+/* Export CSV */
+btn_export.addEventListener('click', () => {
+  loadAll();
+  if(!chamados.length){ alert('Sem dados para exportar.'); return; }
+  const rows = [['id','nome','email','dispositivo','problema','descricao','status','criado','concluidoEm']];
+  chamados.forEach(c => rows.push([c.id,c.nome,c.email,c.dispositivo,c.problema, (c.descricao||'').replace(/\n/g,' '),c.status,c.criado || '', c.concluidoEm || '']));
+  const csvContent = rows.map(r => r.map(cell => `"${String(cell||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csvContent], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = `chamados_export_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+});
+
+/* Reset data */
+btn_reset.addEventListener('click', () => {
+  if(!confirm('Resetar todos os dados? Esta ação não pode ser desfeita.')) return;
+  chamados = [];
+  saveAll();
+  renderAll();
+});
+
+/* Toggle dark (simple: invert colors for cards) */
+toggleDark.addEventListener('change', (e) => {
+  if(e.target.checked) document.documentElement.style.setProperty('--glass','rgba(0,0,0,0.34)');
+  else document.documentElement.style.setProperty('--glass','rgba(255,255,255,0.12)');
+});
+
+/* Render functions */
+function renderAll(){
+  loadAll();
+  renderList();
+  renderMetrics();
+  renderCharts();
+}
+
+function renderList(){
+  loadAll();
+  const q = (searchEl.value || '').toLowerCase();
+  const filt = filterEl.value;
+  const sort = sortEl.value;
+
+  let list = [...chamados];
+
+  // filter
+  if(filt !== 'todos') list = list.filter(c => c.status === filt);
+
+  // search
+  if(q) list = list.filter(c => {
+    const text = `${c.problema} ${c.dispositivo} ${c.descricao} ${c.nome} ${c.email}`.toLowerCase();
+    return text.includes(q);
+  });
+
+  // sort
+  if(sort === 'recent') list.sort((a,b) => new Date(b.criado || 0) - new Date(a.criado || 0));
+  else if(sort === 'oldest') list.sort((a,b) => new Date(a.criado || 0) - new Date(b.criado || 0));
+  else if(sort === 'status') list.sort((a,b) => a.status.localeCompare(b.status));
+
+  // render
+  listContainer.innerHTML = '';
+  if(!list.length){
+    listContainer.innerHTML = '<div class="tiny" style="opacity:0.9">Nenhum chamado encontrado</div>';
+    countInfo.textContent = '';
+    return;
+  }
+
+  list.forEach(c => {
+    const item = document.createElement('div'); item.className = 'item';
+    const meta = document.createElement('div'); meta.className = 'meta';
+    const title = document.createElement('h3'); title.textContent = `${c.problema} — ${c.dispositivo}`;
+    const desc = document.createElement('p'); desc.textContent = c.descricao;
+    const small = document.createElement('div'); small.className = 'small'; small.textContent = `id:${c.id} • ${c.nome} • ${new Date(c.criado).toLocaleString()} • status: ${c.status}`;
+
+    meta.appendChild(title); meta.appendChild(desc); meta.appendChild(small);
+
+    const actions = document.createElement('div'); actions.className = 'actions';
+
+    // only two actions: iniciar and concluir
+    const btnIniciar = document.createElement('button'); btnIniciar.className = 'btn btn-ghost'; btnIniciar.textContent = c.status === 'andamento' ? 'Em andamento' : 'Iniciar';
+    btnIniciar.onclick = () => { updateStatus(c.id,'andamento'); };
+
+    const btnConcluir = document.createElement('button'); btnConcluir.className = 'btn btn-primary';
+    btnConcluir.style.background = 'linear-gradient(90deg,#7BB661,#5CB043)'; btnConcluir.textContent = c.status === 'concluido' ? 'Concluído' : 'Concluir';
+    btnConcluir.onclick = () => { updateStatus(c.id,'concluido'); };
+
+    actions.appendChild(btnIniciar); actions.appendChild(btnConcluir);
+
+    item.appendChild(meta); item.appendChild(actions);
+    listContainer.appendChild(item);
+  });
+
+  countInfo.textContent = `${list.length} itens exibidos (filtro: ${filt})`;
+}
+
+/* Update status */
+function updateStatus(id, newStatus){
+  loadAll();
+  const idx = chamados.findIndex(c => c.id === id);
+  if(idx === -1) return;
+  if(newStatus === 'concluido'){
+    chamados[idx].status = 'concluido';
+    chamados[idx].concluidoEm = new Date().toISOString();
+  } else {
+    chamados[idx].status = newStatus;
+  }
+  saveAll();
+  renderAll();
+}
+
+/* Metrics */
+function renderMetrics(){
+  const total = chamados.length;
+  const aberto = chamados.filter(c => c.status === 'aberto').length;
+  const andamento = chamados.filter(c => c.status === 'andamento').length;
+  const concluido = chamados.filter(c => c.status === 'concluido').length;
+
+  // produtividade hoje (concluídos hoje)
+  const hoje = new Date().toDateString();
+  const prodHoje = chamados.filter(c => {
+    if(!c.concluidoEm) return false;
+    return new Date(c.concluidoEm).toDateString() === hoje;
+  }).length;
+
+  m_total.textContent = total;
+  m_aberto.textContent = aberto;
+  m_andamento.textContent = andamento;
+  m_concluido.textContent = concluido;
+  m_meta.textContent = META_DIARIA;
+  m_prod.textContent = prodHoje;
+}
+
+/* Charts using Chart.js */
+function renderCharts(){
+  const ctxS = $('chartStatus').getContext('2d');
+  const ctxT = $('chartTipo').getContext('2d');
+  const ctxTrend = $('chartTrend').getContext('2d');
+
+  // status counts
+  const statusCounts = { aberto:0, andamento:0, concluido:0 };
+  chamados.forEach(c => { if(statusCounts[c.status] !== undefined) statusCounts[c.status]++; });
+
+  // tipo by dispositivo
+  const tipoMap = {};
+  chamados.forEach(c => tipoMap[c.dispositivo] = (tipoMap[c.dispositivo]||0) + 1);
+
+  // trend last 7 days
+  const days = []; 
+  for(let i=6;i>=0;i--){
+    const d=new Date(); 
+    d.setDate(d.getDate()-i); 
+    days.push(d.toDateString()); 
+  }
+  const trend = days.map(day => 
+    chamados.filter(c => c.concluidoEm && new Date(c.concluidoEm).toDateString()===day).length
+  );
+
+  // destroy existing
+  if(chartStatus) chartStatus.destroy();
+  if(chartTipo) chartTipo.destroy();
+  if(chartTrend) chartTrend.destroy();
+
+  /* ---------------------------- STATUS ---------------------------- */
+  chartStatus = new Chart(ctxS, {
+    type:'doughnut',
+    data:{
+      labels:['Aberto','Andamento','Concluído'],
+      datasets:[{
+        data:[statusCounts.aberto,statusCounts.andamento,statusCounts.concluido],
+        backgroundColor:['#FFD93D','#4A90E2','#7BB661']
+      }]
+    },
+    options:{
+      plugins:{
+        legend:{
+          position:'bottom',
+          labels:{
+            color:'#fff',
+            font:{ size:14, weight:'700' }
+          }
+        }
+      }
+    }
+  });
+
+  /* ---------------------------- TIPO ---------------------------- */
+  chartTipo = new Chart(ctxT, {
+    type:'pie',
+    data:{
+      labels:Object.keys(tipoMap).length?Object.keys(tipoMap):['Nenhum'],
+      datasets:[{
+        data:Object.values(tipoMap).length?Object.values(tipoMap):[1],
+        backgroundColor:['#FFD93D','#4A90E2','#7BB661','#D7263D','#5C3D99']
+      }]
+    },
+    options:{
+      plugins:{
+        legend:{
+          position:'bottom',
+          labels:{
+            color:'#fff',
+            font:{ size:14, weight:'700' }
+          }
+        }
+      }
+    }
+  });
+
+  /* ---------------------------- TENDÊNCIA ---------------------------- */
+  chartTrend = new Chart(ctxTrend, {
+    type:'bar',
+    data:{
+      labels: days.map(d=>d.split(' ').slice(0,3).join(' ')),
+      datasets:[{
+        label:'Concluídos',
+        data:trend,
+        backgroundColor:'#7BB661'
+      }]
+    },
+    options:{
+      plugins:{
+        legend:{ display:false }
+      },
+      scales:{
+        y:{
+          beginAtZero:true,
+          precision:0,
+          ticks:{
+            color:'#fff',
+            font:{ size:13, weight:'700' }
+          }
+        },
+        x:{
+          ticks:{
+            color:'#fff',
+            font:{ size:13, weight:'700' }
+          }
+        }
+      }
+    }
+  });
+}
+
+/* Listen to storage changes (sync between tabs/ngrok) */
+window.addEventListener('storage', (e) => {
+  if(e.key === STORAGE_KEY){
+    renderAll();
+  }
+});
+
+/* initial render */
+renderAll();
+
+/* helpers: removed sample data to show only real user chamados */
+console.log("Seed demo desativado — agora somente chamados reais aparecem.");
+
+</script>
+</body>
+</html>
